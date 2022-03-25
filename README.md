@@ -65,4 +65,4 @@ frontend only with `access_token` (i.e. pass the `token` within
 
 The 3-Clause BSD License
 
-See [LICENSE.md]
+See [LICENSE.md](LICENSE.md)
