@@ -1,0 +1,151 @@
+body {
+    font-size: 14px;
+}
+
+.container .avatar_controls {
+    padding-top: 30px;
+}
+
+.avatar_controls {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.avatar_controls .controls_entry {
+    margin: 1em;
+    flex: 1 0 300px;
+    max-width: 400px;
+}
+
+.avatar_controls .controls_entry .lil-gui {
+    --width: 100%;
+
+    --background-color: #fff;
+    --title-background-color: #fff;
+    --text-color: #000;
+    --title-text-color: #000;
+    --string-color: #000;
+    --number-color: #000;
+    --widget-color: hsl(0, 0%, 90%);
+    --hover-color: hsl(0, 0%, 80%);
+    --focus-color: hsl(0, 0%, 80%);
+
+    --font-size: 1em;
+    --input-font-size: 1em;
+    --padding: 0.5em;
+    --folder-indent: 0.5em;
+}
+
+.avatar_controls .controls_entry .lil-gui.root {
+    border: 1px solid #808080;
+}
+
+.avatar_controls .processing-container {
+    position: relative;
+}
+
+.avatar_controls .processing-container .processing-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    box-sizing: border-box;
+    padding: 1em;
+    padding-top: 2em;
+    background-color: hsla(0, 0%, 90%, 0.9);
+
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-content: flex-start;
+    align-items: center;
+}
+
+.avatar_controls .processing-container .processing-overlay.error {
+    background-color: hsla(0, 90%, 90%, 0.9);
+}
+
+.avatar_controls .processing-container .processing-overlay > * {
+    margin: 0 0.5em;
+}
+
+.avatar_controls .processing-container .processing-overlay .processing-indicator img {
+    width: 2em;
+    height: 2em;
+
+    animation-name: indicator-rotate;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
+    animation-timing-function: steps(8, jump-start);
+}
+
+.avatar_controls .processing-container .processing-overlay .processing-close {
+    display: none;
+}
+
+.avatar_controls .processing-container .processing-overlay.error .processing-close {
+    display: block;
+}
+
+@keyframes indicator-rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.avatar_controls .processing-container .hidden {
+    display: none;
+}
+
+.avatar_controls .parameters_jsons {
+    display: flex;
+    flex-direction: column;
+}
+
+.avatar_controls .parameters_jsons:not(:last-of-type) {
+    margin-bottom: 1em;
+}
+
+.avatar_controls .controls_entry {
+    display: initial;
+}
+
+.avatar_controls .controls_entry.hidden {
+    display: none;
+}
+
+.avatar_controls .controls_entry .entry_header {
+    font-size: 1.2em;
+    font-weight: bolder;
+    margin-bottom: 0.5em;
+}
+
+.avatar_controls .parameters_json {
+    margin: 0.5em 0;
+}
+
+.avatar_controls .parameters_json:first-of-type {
+    margin-top: 0;
+}
+
+.avatar_controls .parameters_json:last-of-type {
+    margin-bottom: 0;
+}
+
+.avatar_controls .parameters_json textarea {
+    box-sizing: border-box;
+    resize: vertical;
+    width: 100%;
+    min-height: 300px;
+
+    font-family: monospace;
+    font-size: 0.75em;
+    line-height: initial;
+    padding: 0.5em;
+    background: #f8f8f8;
+    border: 1px solid #808080;
+}

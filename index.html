@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>AvatarSDK JavaScript sample</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <link type="text/css" rel="stylesheet" href="css/main.css">
+  </head>
+
+  <body>
+    <div class="container avatar_controls">
+      <div class="controls_entry">
+        <h2 class="entry_header">Authorization</h2>
+
+        <div class="processing-container">
+          <div class="processing-overlay hidden">
+            <div class="processing-indicator hidden">
+              <img src="img/loading.svg">
+            </div>
+            <div class="processing-text hidden"></div>
+            <div class="processing-progress hidden"></div>
+            <a href="#" class="processing-close">OK</a>
+          </div>
+
+          <div id="auth_control"></div>
+        </div>
+      </div>
+
+      <div class="controls_entry hidden" id="pipelines_container">
+        <h2 class="entry_header">Avatar</h2>
+
+        <div class="processing-container">
+          <div class="processing-overlay hidden">
+            <div class="processing-indicator hidden">
+              <img src="img/loading.svg">
+            </div>
+            <div class="processing-text hidden"></div>
+            <div class="processing-progress hidden"></div>
+            <a href="#" class="processing-close">OK</a>
+          </div>
+
+          <div id="pipelines_control"></div>
+        </div>
+      </div>
+
+      <div class="controls_entry parameters_jsons hidden" id="jsons_container">
+        <div class="parameters_json">
+          <h2 class="entry_header">Parameters</h2>
+          <textarea id="parameters_json" readonly></textarea>
+        </div>
+
+        <div class="parameters_json">
+          <h2 class="entry_header">Export parameters</h2>
+          <textarea id="export_parameters_json" readonly></textarea>
+        </div>
+      </div>
+
+      <div class="controls_entry hidden" id="exports_container">
+        <h2 class="entry_header">Avatar Exports</h2>
+
+        <div class="processing-container">
+          <div class="processing-overlay hidden">
+            <div class="processing-indicator hidden">
+              <img src="img/loading.svg">
+            </div>
+            <div class="processing-text hidden"></div>
+            <div class="processing-progress hidden"></div>
+            <a href="#" class="processing-close">OK</a>
+          </div>
+
+          <div id="exports_control"></div>
+        </div>
+      </div>
+    </div>
+
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>
