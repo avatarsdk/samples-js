@@ -35,6 +35,7 @@
 import * as ASDK from './asdk.js';
 import GUI from './lil-gui.esm.min.js';
 import InputFileImageController from './lil-gui-InputFileImageController.esm.js';
+import * as AvatarsGL from './avatars_gl.js';
 
 
 // === constants ===============================================================
@@ -97,6 +98,9 @@ export function init(config) {
   let asdk = new ASDK.AvatarSDK(config['token'], config['app_api']);
 
   init_ui(asdk, config);
+  AvatarsGL.init_gl(config['canvas']);
+
+  config['canvas'].addEventListener('dblclick', (evt) => evt.target.requestFullscreen());
 }
 
 
@@ -162,29 +166,30 @@ function onPipelineSelected(value, asdk, controls, cObj, config) {
 
   startProcessingOverlay(config['pipelines_control'], true);
 
-  let parametersPromise = asdk.get_available_parameters(pipeline, subtype).then(
-    (j) => fillParametersGui(j, controls, cObj)
-  ).then((folder) => {
+  let parametersPromise = asdk.get_available_parameters(pipeline, subtype)
+  let exportParametersPromise = asdk.get_available_export_parameters(pipeline, subtype)
+
+  Promise.all([parametersPromise, exportParametersPromise]).then((promises) => {
+    let [parameters, exportParameters] = promises;
+
+    parameters = _delete_parameters_duplicates(parameters, exportParameters);
+
+    fillParametersGui(parameters, controls, cObj);
     fillParametersJson(
       config['parameters_json'],
       () => cObj['parameters'],
       generateComputationParameters
     );
     _showElement(config['jsons_container']);
-  });
 
-  let exportParametersPromise = asdk.get_available_export_parameters(pipeline, subtype).then(
-    (j) => fillExportParametersGui(j, controls, cObj)
-  ).then((folder) => {
+    fillExportParametersGui(exportParameters, controls, cObj);
     fillParametersJson(
       config['export_parameters_json'],
       () => cObj['export_parameters'],
       generateExportParameters
     );
     _showElement(config['jsons_container']);
-  });
-
-  Promise.all([parametersPromise, exportParametersPromise]).then(
+  }).then(
     () => endProcessingOverlay(config['pipelines_control'])
   ).catch((err) => {
     let msg = extractErrorMessage(err, 'Something went wrong');
@@ -506,12 +511,54 @@ function generateExportParameters(parameters) {
 }
 
 
+function generateVisualExportParameters(parameters) {
+  let ret = {
+    'format': 'glb',
+    'embed': true,
+    'embed_textures': true,
+  };
+
+  const _keysToCopy = ['lod', 'texture_size', 'color'];
+  const _catToCopy = ['', 'haircuts', 'outfits'];
+
+  for (const category of _catToCopy) {
+    let root = parameters;
+    let target = ret;
+
+    if (!!category) {
+      root = parameters?.[category];
+      if (root === undefined) continue;
+
+      target = _getDefault(ret, category, {});
+
+      let catList = root.list;
+
+      let valid = (!!catList) && catList.length > 0;
+      if (valid) {
+        target['list'] = [catList[0]]
+      };
+    }
+
+    for (const key of _keysToCopy) {
+      let value = root?.[key];
+      if (value === undefined) continue;
+
+      target[key] = value;
+    }
+  }
+
+  return ret;
+}
+
+
 function onComputeAvatar(asdk, cObj, config) {
   let ctrl = config['pipelines_control'];
   let callbacks = startProcessingOverlay(ctrl, true, 'Uploading', '');
   let onProgress = (a) => _onAvatarProgress(callbacks, a);
 
   _hideElement(config['exports_container']);
+  _hideElement(config['canvas_container']);
+  AvatarsGL.reset();
 
   let photo = cObj['photo'][0];
   if (!photo) return startErrorOverlay(ctrl, 'Please select a photo');
@@ -524,7 +571,8 @@ function onComputeAvatar(asdk, cObj, config) {
   let parameters = generateComputationParameters(cObj['parameters']);
   parameters = JSON.stringify(parameters);
   let export_parameters = generateExportParameters(cObj['export_parameters']);
-  export_parameters = JSON.stringify(export_parameters);
+  let visual_export_parameters = generateVisualExportParameters(export_parameters);
+  export_parameters = JSON.stringify([visual_export_parameters, export_parameters]);
 
   asdk.create_avatar(
     'test', photo, pipeline, subtype, parameters, export_parameters
@@ -533,9 +581,15 @@ function onComputeAvatar(asdk, cObj, config) {
   ).then(
     (avatar) => asdk.get_exports(avatar)
   ).then(
-    (exports) => _getFirstExport(exports, asdk)
+    (exports) => {
+      _getAvatarExport(exports, asdk, 1).then(
+        (exportObject) => fillExportsGUI(exportObject, asdk, config)
+      );
+
+      return _getAvatarExport(exports, asdk);
+    }
   ).then(
-    (exportObject) => fillExportsGUI(exportObject, asdk, config)
+    (exportObject) => visualizeExport(exportObject, asdk, config)
   ).then(
     () => endProcessingOverlay(ctrl)
   ).catch((err) => {
@@ -610,6 +664,44 @@ function fillExportsGUI(exportObject, asdk, config) {
 }
 
 
+function visualizeExport(avatarExport, asdk, config) {
+  let viewer = config['canvas'].parentElement;
+
+  let avatarExportFile = undefined;
+
+  for (const exportFile of avatarExport['files']) {
+    if (exportFile['identity'] !== 'avatar') continue;
+
+    avatarExportFile = exportFile;
+    break;
+  }
+
+  if (!avatarExportFile) {
+    startErrorOverlay(viewer, 'No avatar preview export file found');
+    return;
+  }
+
+
+  _showElement(config['canvas_container']);
+  let callbacks = startProcessingOverlay(viewer, true, 'Downloading', '');
+  let onProgress = (stage, pct) => {
+    callbacks['text'](stage);
+
+    pct = (!!pct) ? pct + '%' : '';
+    callbacks['progress'](pct);
+  }
+
+  asdk.get_export_file_contents(
+    avatarExportFile, onProgress
+  ).then(AvatarsGL.display).then(
+    () => endProcessingOverlay(viewer)
+  ).catch((err) => {
+    let msg = extractErrorMessage(err, 'Something went wrong');
+    startErrorOverlay(viewer, msg);
+  });
+}
+
+
 function downloadExportFile(asdk, url, filename, config) {
   startProcessingOverlay(config['exports_control'], true, 'Downloading');
 
@@ -678,7 +770,7 @@ export function startProcessingOverlay(controlElement, indicator, text, progress
 
   _showElement(overlay);
 
-  return ret
+  return ret;
 }
 
 export function endProcessingOverlay(controlElement) {
@@ -872,11 +964,39 @@ function _onAvatarProgress(callbacks, avatar) {
 }
 
 
-function _getFirstExport(exports, asdk) {
-  let aExport = exports[0];
+function _cmp(a, b) {
+  if (a > b) return 1;
+  if (a < b) return -1;
+  return 0;
+}
+
+
+function _getAvatarExport(exports, asdk, idx=0) {
+  if (idx > exports.length) return undefined;
+
+  if (exports.length > 1) {
+    exports.sort((a, b) => _cmp(a['created_on'], b['created_on']));
+  }
+
+  let aExport = exports[idx];
   let isCompleted = aExport['status'] === 'Completed';
 
   if (!isCompleted) return asdk.poll_export(aExport);
 
   return Promise.resolve(aExport);
+}
+
+
+function _delete_parameters_duplicates(parameters, exportParameters) {
+  let subtype = Object.keys(parameters);
+  if (!subtype.length) return parameters;
+  subtype = subtype[0];
+
+  Object.keys(exportParameters).forEach((epCat) => {
+    let present = parameters[subtype].hasOwnProperty(epCat);
+    if (!present) return;
+    delete parameters[subtype][epCat];
+  });
+
+  return parameters;
 }

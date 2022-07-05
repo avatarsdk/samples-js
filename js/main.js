@@ -99,6 +99,8 @@ function init_avatars_ui(token) {
     parameters_json: document.getElementById('parameters_json'),
     export_parameters_json: document.getElementById('export_parameters_json'),
     exports_container: document.getElementById('exports_container'),
+    canvas_container: document.getElementById('canvas_container'),
+    canvas: document.getElementById('canvas'),
   };
 
   AvatarsUI.init(config);

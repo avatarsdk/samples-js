@@ -149,3 +149,9 @@ body {
     background: #f8f8f8;
     border: 1px solid #808080;
 }
+
+.avatar_controls .viewer #canvas {
+    position: relative;
+    min-width: 300px;
+    min-height: 200px;
+}

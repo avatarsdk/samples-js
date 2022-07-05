@@ -32,13 +32,16 @@
  */
 
 
+import * as JSZIP from './jszip-3.7.1.min.js';
+
+
 export class AvatarSDK {
   constructor(token, url) {
     this.token = token;
     this._auth_header = 'Bearer ' + token;
     this.base_url = url;
 
-    this._x_user_agent = 'asdk.js/0.1 (' + window.location.host + ')';
+    this._x_user_agent = 'asdk.js/0.2 (' + window.location.host + ')';
   };
 
   _url(url) {
@@ -200,5 +203,96 @@ export class AvatarSDK {
 
       return Promise.resolve(link);
     }
+  }
+
+  _extractZipFiles(blob) {
+    return JSZip.loadAsync(blob).then(
+      (z) => {
+        let promises = [];
+
+        for (const zipFile of Object.values(z.files)) {
+          if (zipFile.dir) continue;
+
+          let filename = zipFile.name.split('/');
+          filename = filename[filename.length-1];
+          let p = zipFile.async('blob').then((b) => {
+            let r = {};
+            r[filename] = b;
+            return r;
+          });
+
+          promises.push(p);
+        }
+
+        return Promise.all(promises).then((blobs) => {
+          return blobs.reduce((a, i) => {
+            Object.assign(a, i);
+            return a;
+          }, {})
+        });
+      }
+    );
+  }
+
+  get_export_file_contents(avatarExportFile, onProgress) {
+    let fileUrl = avatarExportFile['file'];
+    let zipFilesPromises = this._performRequest(fileUrl).then((response) => {
+      // source:
+      // https://github.com/AnthumChris/fetch-progress-indicators/blob/3fd300c3ce490037ecc404836d11a5bc9708f264/fetch-basic/supported-browser.js
+
+      if (!response.ok) {
+        throw Error(response.status+' '+response.statusText)
+      }
+
+      if (!response.body) {
+        throw Error('ReadableStream not yet supported in this browser.')
+      }
+
+      // to access headers, server must send CORS header "Access-Control-Expose-Headers: content-encoding, content-length x-file-size"
+      // server must send custom x-file-size header if gzip or other content-encoding is used
+      const contentEncoding = response.headers.get('content-encoding');
+      const contentLength = response.headers.get(contentEncoding ? 'x-file-size' : 'content-length');
+      if (contentLength === null) {
+        throw Error('Response size header unavailable');
+      }
+
+      const total = parseInt(contentLength, 10);
+      let loaded = 0;
+
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            const reader = response.body.getReader();
+
+            read();
+            function read() {
+              reader.read().then(({done, value}) => {
+                if (done) {
+                  controller.close();
+                  return;
+                }
+                loaded += value.byteLength;
+
+                let pct = Math.round(100.0 * loaded/total);
+                if (!!onProgress) onProgress('Downloading', pct);
+
+                controller.enqueue(value);
+                read();
+              }).catch(error => {
+                console.error(error);
+                controller.error(error)
+              })
+            }
+          }
+        })
+      );
+    }).then(
+      (r) => r.blob()
+    ).then((blob) => {
+      if (!!onProgress) onProgress('Processing');
+      return this._extractZipFiles(blob);
+    });
+
+    return zipFilesPromises;
   }
 };
